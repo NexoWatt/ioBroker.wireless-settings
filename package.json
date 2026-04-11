@@ -9,6 +9,7 @@
   "homepage": "https://github.com/ioBroker/ioBroker.wireless-settings",
   "license": "MIT",
   "keywords": [
+    "ioBroker",
     "network",
     "data mining"
   ],
