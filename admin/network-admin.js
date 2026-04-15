@@ -121,9 +121,45 @@
         toast: '',
         toastError: false,
         passwordTarget: null,
+        theme: 'light',
     };
 
     let socket;
+    let systemThemeMedia;
+
+    function resolveSystemTheme() {
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    function updateThemeColorMeta(theme) {
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+            meta.setAttribute('content', theme === 'dark' ? '#10131a' : '#f5f7fb');
+        }
+    }
+
+    function applySystemTheme() {
+        state.theme = resolveSystemTheme();
+        document.documentElement.dataset.theme = state.theme;
+        document.documentElement.style.colorScheme = state.theme;
+        updateThemeColorMeta(state.theme);
+    }
+
+    function bindSystemTheme() {
+        if (!window.matchMedia || systemThemeMedia) {
+            return;
+        }
+        systemThemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+        const handler = () => {
+            applySystemTheme();
+            render();
+        };
+        if (typeof systemThemeMedia.addEventListener === 'function') {
+            systemThemeMedia.addEventListener('change', handler);
+        } else if (typeof systemThemeMedia.addListener === 'function') {
+            systemThemeMedia.addListener(handler);
+        }
+    }
 
     function parseQuery() {
         const result = {};
@@ -528,6 +564,7 @@
     }
 
     function render() {
+        applySystemTheme();
         const root = document.getElementById('root');
         const selected = selectedInterface();
         const edited = editedInterface();
@@ -670,6 +707,23 @@
                 render();
             };
         }
+
+        const modalBackdrop = document.getElementById('wifi-modal-backdrop');
+        if (modalBackdrop) {
+            modalBackdrop.onclick = event => {
+                if (event.target === modalBackdrop) {
+                    state.passwordTarget = null;
+                    render();
+                }
+            };
+        }
+
+        document.onkeydown = event => {
+            if (event.key === 'Escape' && state.passwordTarget) {
+                state.passwordTarget = null;
+                render();
+            }
+        };
     }
 
     function bindInput(id, handler) {
@@ -783,6 +837,8 @@
     }
 
     window.initializeWirelessSettingsAdmin = async function initializeWirelessSettingsAdmin() {
+        applySystemTheme();
+        bindSystemTheme();
         socket = window.io.connect();
         socket.on('connect', () => {
             refreshAll(true).catch(error => setToast(`${t('saveFailed')}: ${error.message || error}`, true));
